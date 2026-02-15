@@ -1,65 +1,142 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import { Sidebar } from '@/components/sidebar';
+import Canvas from '@/components/canvas';
+import PropertiesPanel from '@/components/properties-panel';
+import { CodeDisplayModal } from '@/components/code-display-modal';
+import { CanvasProvider, useCanvas } from '@/lib/canvas-context';
+import { generateTerraform } from '@/lib/terraform-generator';
+import { Button } from '@/components/ui/button';
+import { Code, Menu, X, Settings } from 'lucide-react';
+
+function HomeContent() {
+  const { state } = useCanvas();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isPropertiesOpen, setIsPropertiesOpen] = useState(false);
+
+  const handleGenerateCode = () => {
+    const code = generateTerraform(state.nodes, state.edges);
+    setGeneratedCode(code);
+    setIsModalOpen(true);
+  };
+
+  const hasNodes = state.nodes.length > 0;
+
+  return (
+    <>
+      <div className="flex flex-col h-screen">
+        {/* Header with Generate Code button */}
+        <header className="border-b bg-background px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Mobile menu toggle for sidebar */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden flex-shrink-0"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              aria-label="Toggle sidebar"
+            >
+              {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+            
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-semibold truncate">InfraCanvas</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Visual Infrastructure Builder</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Mobile toggle for properties panel */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setIsPropertiesOpen(!isPropertiesOpen)}
+              aria-label="Toggle properties"
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
+            
+            <Button 
+              onClick={handleGenerateCode} 
+              size="default" 
+              disabled={!hasNodes}
+              className="gap-2"
+            >
+              <Code className="h-4 w-4" />
+              <span className="hidden sm:inline">Generate Code</span>
+            </Button>
+          </div>
+        </header>
+
+        {/* Main layout: Sidebar | Canvas | Properties Panel */}
+        <div className="flex flex-1 overflow-hidden relative">
+          {/* Sidebar - hidden on mobile by default, toggleable */}
+          <div className={`
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+            lg:translate-x-0
+            fixed lg:relative
+            z-30 lg:z-auto
+            transition-transform duration-300 ease-in-out
+            h-[calc(100vh-73px)] lg:h-auto
+          `}>
+            <Sidebar />
+          </div>
+          
+          {/* Overlay for mobile sidebar */}
+          {isSidebarOpen && (
+            <div 
+              className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+              onClick={() => setIsSidebarOpen(false)}
+              aria-hidden="true"
+            />
+          )}
+          
+          {/* Canvas - takes full width on mobile */}
+          <div className="flex-1 min-w-0">
+            <Canvas />
+          </div>
+          
+          {/* Properties Panel - hidden on mobile by default, toggleable */}
+          <div className={`
+            ${isPropertiesOpen ? 'translate-x-0' : 'translate-x-full'}
+            lg:translate-x-0
+            fixed lg:relative
+            right-0
+            z-30 lg:z-auto
+            transition-transform duration-300 ease-in-out
+            h-[calc(100vh-73px)] lg:h-auto
+          `}>
+            <PropertiesPanel />
+          </div>
+          
+          {/* Overlay for mobile properties panel */}
+          {isPropertiesOpen && (
+            <div 
+              className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+              onClick={() => setIsPropertiesOpen(false)}
+              aria-hidden="true"
+            />
+          )}
+        </div>
+      </div>
+
+      <CodeDisplayModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        code={generatedCode}
+      />
+    </>
+  );
+}
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <CanvasProvider>
+      <HomeContent />
+    </CanvasProvider>
   );
 }
