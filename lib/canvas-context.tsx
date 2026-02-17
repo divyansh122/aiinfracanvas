@@ -1,7 +1,7 @@
 // Canvas state management with React Context
 'use client';
 
-import { createContext, useContext, useReducer, ReactNode } from 'react';
+import { createContext, useContext, useReducer, ReactNode, useMemo, useCallback } from 'react';
 import { CanvasState, CanvasAction, Node, Edge, NodeData } from '@/types';
 
 // Initial state
@@ -9,6 +9,8 @@ const initialState: CanvasState = {
   nodes: [],
   edges: [],
   selectedNodeId: null,
+  isLoading: false,
+  error: null,
 };
 
 // Reducer function
@@ -80,6 +82,18 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
         ),
       };
 
+    case 'SET_LOADING':
+      return {
+        ...state,
+        isLoading: action.payload,
+      };
+
+    case 'SET_ERROR':
+      return {
+        ...state,
+        error: action.payload,
+      };
+
     default:
       return state;
   }
@@ -99,6 +113,8 @@ interface CanvasContextType {
   selectNode: (id: string | null) => void;
   updateNodePosition: (id: string, position: { x: number; y: number }) => void;
   getSelectedNode: () => Node | null;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
 }
 
 // Create context
@@ -108,49 +124,59 @@ export const CanvasContext = createContext<CanvasContextType | null>(null);
 export function CanvasProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(canvasReducer, initialState);
 
-  // Helper functions
-  const addNode = (node: Node) => {
+  // Memoize helper functions to prevent unnecessary re-renders
+  const addNode = useCallback((node: Node) => {
     dispatch({ type: 'ADD_NODE', payload: node });
-  };
+  }, []);
 
-  const updateNode = (id: string, data: Partial<NodeData>) => {
+  const updateNode = useCallback((id: string, data: Partial<NodeData>) => {
     dispatch({ type: 'UPDATE_NODE', payload: { id, data } });
-  };
+  }, []);
 
-  const deleteNode = (id: string) => {
+  const deleteNode = useCallback((id: string) => {
     dispatch({ type: 'DELETE_NODE', payload: id });
-  };
+  }, []);
 
-  const addEdge = (edge: Edge) => {
+  const addEdge = useCallback((edge: Edge) => {
     dispatch({ type: 'ADD_EDGE', payload: edge });
-  };
+  }, []);
 
-  const deleteEdge = (id: string) => {
+  const deleteEdge = useCallback((id: string) => {
     dispatch({ type: 'DELETE_EDGE', payload: id });
-  };
+  }, []);
 
-  const setNodes = (nodes: Node[]) => {
+  const setNodes = useCallback((nodes: Node[]) => {
     dispatch({ type: 'SET_NODES', payload: nodes });
-  };
+  }, []);
 
-  const setEdges = (edges: Edge[]) => {
+  const setEdges = useCallback((edges: Edge[]) => {
     dispatch({ type: 'SET_EDGES', payload: edges });
-  };
+  }, []);
 
-  const selectNode = (id: string | null) => {
+  const selectNode = useCallback((id: string | null) => {
     dispatch({ type: 'SELECT_NODE', payload: id });
-  };
+  }, []);
 
-  const updateNodePosition = (id: string, position: { x: number; y: number }) => {
+  const updateNodePosition = useCallback((id: string, position: { x: number; y: number }) => {
     dispatch({ type: 'UPDATE_NODE_POSITION', payload: { id, position } });
-  };
+  }, []);
 
-  const getSelectedNode = (): Node | null => {
+  // Memoize selected node lookup to avoid recalculation on every render
+  const getSelectedNode = useCallback((): Node | null => {
     if (!state.selectedNodeId) return null;
     return state.nodes.find((node) => node.id === state.selectedNodeId) || null;
-  };
+  }, [state.selectedNodeId, state.nodes]);
 
-  const value: CanvasContextType = {
+  const setLoading = useCallback((loading: boolean) => {
+    dispatch({ type: 'SET_LOADING', payload: loading });
+  }, []);
+
+  const setError = useCallback((error: string | null) => {
+    dispatch({ type: 'SET_ERROR', payload: error });
+  }, []);
+
+  // Memoize context value to prevent unnecessary re-renders of consumers
+  const value: CanvasContextType = useMemo(() => ({
     state,
     dispatch,
     addNode,
@@ -163,7 +189,23 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     selectNode,
     updateNodePosition,
     getSelectedNode,
-  };
+    setLoading,
+    setError,
+  }), [
+    state,
+    addNode,
+    updateNode,
+    deleteNode,
+    addEdge,
+    deleteEdge,
+    setNodes,
+    setEdges,
+    selectNode,
+    updateNodePosition,
+    getSelectedNode,
+    setLoading,
+    setError,
+  ]);
 
   return (
     <CanvasContext.Provider value={value}>

@@ -15,7 +15,7 @@ function EC2Node(props: NodeProps) {
       id={props.id}
       data={data}
       selected={props.selected}
-      icon={config.icon}
+      iconUrl={config.iconUrl}
       color="bg-gradient-to-br from-orange-500 to-orange-600"
       category={config.label}
     />

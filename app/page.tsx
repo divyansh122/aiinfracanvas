@@ -5,25 +5,59 @@ import { Sidebar } from '@/components/sidebar';
 import Canvas from '@/components/canvas';
 import PropertiesPanel from '@/components/properties-panel';
 import { CodeDisplayModal } from '@/components/code-display-modal';
+import { KeyboardShortcutsDialog } from '@/components/keyboard-shortcuts-dialog';
+import { ErrorBoundary } from '@/components/error-boundary';
+import { DeploymentTerminal } from '@/components/deployment-terminal';
 import { CanvasProvider, useCanvas } from '@/lib/canvas-context';
 import { generateTerraform } from '@/lib/terraform-generator';
+import { useKeyboardShortcuts } from '@/lib/use-keyboard-shortcuts';
 import { Button } from '@/components/ui/button';
-import { Code, Menu, X, Settings } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Code, Menu, X, Settings, Loader2, Keyboard, Play } from 'lucide-react';
+import { Toaster, toast } from 'sonner';
 
 function HomeContent() {
-  const { state } = useCanvas();
+  const { state, setError } = useCanvas();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [generatedCode, setGeneratedCode] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPropertiesOpen, setIsPropertiesOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showSimulator, setShowSimulator] = useState(false);
 
-  const handleGenerateCode = () => {
-    const code = generateTerraform(state.nodes, state.edges);
-    setGeneratedCode(code);
-    setIsModalOpen(true);
+  const handleGenerateCode = async () => {
+    try {
+      setIsGenerating(true);
+      setError(null);
+      
+      // Simulate async operation for better UX
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const code = generateTerraform(state.nodes, state.edges);
+      setGeneratedCode(code);
+      setIsModalOpen(true);
+      
+      toast.success('Terraform code generated successfully');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate code';
+      setError(errorMessage);
+      toast.error('Code generation failed', {
+        description: errorMessage,
+      });
+      console.error('Code generation error:', error);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const hasNodes = state.nodes.length > 0;
+
+  // Enable keyboard shortcuts
+  useKeyboardShortcuts({
+    onGenerateCode: handleGenerateCode,
+    enabled: true,
+  });
 
   return (
     <>
@@ -49,26 +83,87 @@ function HomeContent() {
           </div>
           
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Mobile toggle for properties panel */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden"
-              onClick={() => setIsPropertiesOpen(!isPropertiesOpen)}
-              aria-label="Toggle properties"
-            >
-              <Settings className="h-5 w-5" />
-            </Button>
+            {/* Keyboard shortcuts help button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowShortcuts(true)}
+                  aria-label="Keyboard shortcuts"
+                >
+                  <Keyboard className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Keyboard shortcuts (Ctrl+/)</p>
+              </TooltipContent>
+            </Tooltip>
             
-            <Button 
-              onClick={handleGenerateCode} 
-              size="default" 
-              disabled={!hasNodes}
-              className="gap-2"
-            >
-              <Code className="h-4 w-4" />
-              <span className="hidden sm:inline">Generate Code</span>
-            </Button>
+            {/* Mobile toggle for properties panel */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="lg:hidden"
+                  onClick={() => setIsPropertiesOpen(!isPropertiesOpen)}
+                  aria-label="Toggle properties"
+                >
+                  <Settings className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Toggle properties panel</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            {/* Simulate Deployment button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => setShowSimulator(true)}
+                  variant="outline"
+                  size="default"
+                  disabled={!hasNodes}
+                  className="gap-2"
+                >
+                  <Play className="h-4 w-4" />
+                  <span className="hidden sm:inline">Simulate Deployment</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Simulate deployment process</p>
+                {!hasNodes && <p className="text-xs opacity-75 mt-1">Add resources to canvas first</p>}
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  onClick={handleGenerateCode} 
+                  size="default" 
+                  disabled={!hasNodes || isGenerating}
+                  className="gap-2"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="hidden sm:inline">Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Code className="h-4 w-4" />
+                      <span className="hidden sm:inline">Generate Code</span>
+                    </>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Generate Terraform code (Ctrl+G)</p>
+                {!hasNodes && <p className="text-xs opacity-75 mt-1">Add resources to canvas first</p>}
+              </TooltipContent>
+            </Tooltip>
           </div>
         </header>
 
@@ -129,14 +224,30 @@ function HomeContent() {
         onOpenChange={setIsModalOpen}
         code={generatedCode}
       />
+      
+      <DeploymentTerminal
+        isOpen={showSimulator}
+        onClose={() => setShowSimulator(false)}
+        nodes={state.nodes}
+        edges={state.edges}
+      />
+      
+      <KeyboardShortcutsDialog
+        open={showShortcuts}
+        onOpenChange={setShowShortcuts}
+      />
+      
+      <Toaster position="bottom-right" richColors />
     </>
   );
 }
 
 export default function Home() {
   return (
-    <CanvasProvider>
-      <HomeContent />
-    </CanvasProvider>
+    <ErrorBoundary>
+      <CanvasProvider>
+        <HomeContent />
+      </CanvasProvider>
+    </ErrorBoundary>
   );
 }

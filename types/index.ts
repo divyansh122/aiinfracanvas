@@ -1,8 +1,8 @@
 // TypeScript type definitions for InfraCanvas
 
 // Resource types supported by the application
-export type ResourceTypeId = 'ec2' | 's3' | 'rds';
-export type ResourceCategory = 'compute' | 'storage' | 'database';
+export type ResourceTypeId = 'ec2' | 'lambda' | 'vpc' | 'alb' | 'apigateway' | 'rds' | 'dynamodb' | 's3' | 'waf';
+export type ResourceCategory = 'compute' | 'network' | 'database' | 'storage' | 'security';
 
 // Node types for React Flow
 export interface Node {
@@ -54,6 +54,8 @@ export interface CanvasState {
   nodes: Node[];
   edges: Edge[];
   selectedNodeId: string | null;
+  isLoading?: boolean;
+  error?: string | null;
 }
 
 // Resource type configuration for sidebar
@@ -74,4 +76,6 @@ export type CanvasAction =
   | { type: 'SET_NODES'; payload: Node[] }
   | { type: 'SET_EDGES'; payload: Edge[] }
   | { type: 'SELECT_NODE'; payload: string | null }
-  | { type: 'UPDATE_NODE_POSITION'; payload: { id: string; position: { x: number; y: number } } };
+  | { type: 'UPDATE_NODE_POSITION'; payload: { id: string; position: { x: number; y: number } } }
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string | null };

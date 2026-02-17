@@ -15,7 +15,7 @@ function RDSNode(props: NodeProps) {
       id={props.id}
       data={data}
       selected={props.selected}
-      icon={config.icon}
+      iconUrl={config.iconUrl}
       color="bg-gradient-to-br from-blue-500 to-blue-600"
       category={config.label}
     />
